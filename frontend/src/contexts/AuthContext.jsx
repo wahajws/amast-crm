@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
 
   const loginWithGmail = () => {
     // Get API URL and ensure it ends with /api/auth/gmail
-    let apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    let apiUrl = import.meta.env.VITE_API_URL || '/api';
     
     // Remove trailing slashes
     apiUrl = apiUrl.replace(/\/+$/, '');
