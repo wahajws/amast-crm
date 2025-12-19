@@ -20,23 +20,23 @@ const allowedOrigins = process.env.CORS_ORIGIN
   : ['http://localhost:3001', 'http://47.250.126.192', 'https://tmybaiki.amastsales-sandbox.com', 'http://tmybaiki.amastsales-sandbox.com'];
 
 // Log allowed origins for debugging
-console.log('CORS Allowed Origins:', allowedOrigins);
+logger.info('CORS Allowed Origins:', { origins: allowedOrigins });
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
-      console.log('CORS: No origin header, allowing request');
+      logger.info('CORS: No origin header, allowing request');
       return callback(null, true);
     }
     
-    console.log('CORS: Request from origin:', origin);
+    logger.info('CORS: Request from origin:', { origin });
     
     if (allowedOrigins.indexOf(origin) !== -1) {
-      console.log('CORS: Origin allowed');
+      logger.info('CORS: Origin allowed');
       callback(null, true);
     } else {
-      console.log('CORS: Origin not in allowed list, but allowing anyway');
+      logger.warn('CORS: Origin not in allowed list, but allowing anyway', { origin, allowedOrigins });
       callback(null, true); // Allow all origins for now
     }
   },
