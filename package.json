@@ -7,7 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "node utils/runMigrations.js",
-    "seed": "node utils/runSeeds.js"
+    "seed": "node utils/runSeeds.js",
+    "export-schema": "node utils/export-schema.js",
+    "create-migration": "node utils/create-migration-from-schema.js"
   },
   "keywords": [],
   "author": "",
