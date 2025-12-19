@@ -11,10 +11,29 @@ const routes = require('./routes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Trust proxy - Required when running behind Nginx or other reverse proxy
-// Set to 1 to trust only the first proxy (Nginx), which is more secure
-// This allows Express to correctly identify client IPs from X-Forwarded-For headers
-app.set('trust proxy', 1);
+// Trust proxy configuration - SINGLE SOURCE OF TRUTH
+// Configure trust proxy hops from environment variable (default: 1 for production behind Nginx)
+// 0 = no proxy, 1 = behind Nginx, 2 = behind Nginx + Load Balancer, etc.
+const trustProxyHops = (() => {
+  const envValue = process.env.TRUST_PROXY_HOPS;
+  if (envValue === undefined || envValue === null) {
+    // Default to 1 in production (behind Nginx), 0 in development
+    return process.env.NODE_ENV === 'production' ? 1 : 0;
+  }
+  const hops = Number(envValue);
+  // Clamp to valid range: 0-5
+  return Number.isFinite(hops) ? Math.min(Math.max(hops, 0), 5) : 1;
+})();
+
+app.set('trust proxy', trustProxyHops);
+
+// Log trust proxy configuration at startup
+logger.info('Trust proxy configuration:', {
+  hops: trustProxyHops,
+  setting: app.get('trust proxy'),
+  environment: process.env.NODE_ENV,
+  TRUST_PROXY_HOPS: process.env.TRUST_PROXY_HOPS
+});
 
 // Security middleware
 app.use(helmet());
@@ -54,6 +73,7 @@ app.use(cors({
 }));
 
 // Rate limiting - More permissive for authenticated API routes
+// IMPORTANT: This is created AFTER trust proxy is set, so req.ip will work correctly
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 2000, // limit each IP/user to 2000 requests per 15 minutes (very permissive for CRM usage)
@@ -68,19 +88,25 @@ const apiLimiter = rateLimit({
   skip: (req) => {
     return req.path === '/health' || req.path === '/api/health';
   },
-  // Custom keyGenerator to use req.ip (which works correctly with trust proxy: 1)
-  // This bypasses the trust proxy validation error
+  // Custom keyGenerator: Use req.ip which is correctly set by Express when trust proxy is configured
+  // This is safe because we've already set trust proxy above
   keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress || 'unknown';
+    // req.ip is automatically set by Express based on trust proxy configuration
+    // It will use X-Forwarded-For if trust proxy is enabled, or direct connection IP if not
+    return req.ip || req.socket?.remoteAddress || 'unknown';
   },
-  // Skip trust proxy validation - we're properly configured with trust proxy: 1
-  skipRateLimitOnError: true, // Don't fail if rate limiting has issues
+  // Disable trust proxy validation - we've properly configured it above
+  // This prevents the ERR_ERL_PERMISSIVE_TRUST_PROXY error
+  validate: {
+    trustProxy: false
+  },
   // Note: Using IP-based limiting since authentication happens in route middleware
   // The limit is permissive enough (2000 req/15min) to handle normal CRM usage
   // This is approximately 2.2 requests per second, which is very reasonable
 });
 
 // Rate limiting - Stricter for auth routes (to prevent brute force)
+// IMPORTANT: This is created AFTER trust proxy is set, so req.ip will work correctly
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // limit each IP to 20 login attempts per 15 minutes (increased from 10)
@@ -92,13 +118,17 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful requests
-  // Custom keyGenerator to use req.ip (which works correctly with trust proxy: 1)
-  // This bypasses the trust proxy validation error
+  // Custom keyGenerator: Use req.ip which is correctly set by Express when trust proxy is configured
+  // This is safe because we've already set trust proxy above
   keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress || 'unknown';
+    // req.ip is automatically set by Express based on trust proxy configuration
+    return req.ip || req.socket?.remoteAddress || 'unknown';
   },
-  // Skip trust proxy validation - we're properly configured with trust proxy: 1
-  skipRateLimitOnError: true // Don't fail if rate limiting has issues
+  // Disable trust proxy validation - we've properly configured it above
+  // This prevents the ERR_ERL_PERMISSIVE_TRUST_PROXY error
+  validate: {
+    trustProxy: false
+  }
 });
 
 // Apply API rate limiter to all routes except auth
@@ -159,6 +189,13 @@ async function startServer() {
     // Start server
     app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+      logger.info('Trust proxy configuration:', {
+        hops: trustProxyHops,
+        setting: app.get('trust proxy'),
+        note: trustProxyHops > 0 
+          ? `Trusting ${trustProxyHops} proxy hop(s) - req.ip will use X-Forwarded-For`
+          : 'No proxy trust - req.ip will use direct connection IP'
+      });
       
       // Initialize default admin on startup
       const UserService = require('./services/UserService');

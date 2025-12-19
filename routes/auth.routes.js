@@ -8,6 +8,8 @@ const { body } = require('express-validator');
 const authController = new AuthController();
 
 // Rate limiter for login attempts (prevent brute force)
+// NOTE: This rate limiter is used in routes, so it will receive req from the main app
+// The main app's trust proxy setting applies here as well
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20, // limit each IP to 20 login attempts per 15 minutes (increased for better UX)
@@ -19,13 +21,16 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful requests
-  // Custom keyGenerator to use req.ip (which works correctly with trust proxy: 1)
-  // This bypasses the trust proxy validation error
+  // Custom keyGenerator: Use req.ip which is correctly set by Express when trust proxy is configured
   keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress || 'unknown';
+    // req.ip is automatically set by Express based on trust proxy configuration
+    return req.ip || req.socket?.remoteAddress || 'unknown';
   },
-  // Skip trust proxy validation - we're properly configured with trust proxy: 1
-  skipRateLimitOnError: true // Don't fail if rate limiting has issues
+  // Disable trust proxy validation - trust proxy is configured in server.js
+  // This prevents the ERR_ERL_PERMISSIVE_TRUST_PROXY error
+  validate: {
+    trustProxy: false
+  }
 });
 
 // Login
