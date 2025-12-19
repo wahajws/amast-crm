@@ -23,6 +23,28 @@ module.exports = {
       merge_logs: true,
       kill_timeout: 5000
     }
+    // Note: Frontend is built as static files and served by Nginx
+    // No PM2 process needed for frontend in production
+    // If you need to run Vite dev server (not recommended for production), uncomment below:
+    /*
+    {
+      name: 'amast-crm-frontend',
+      script: 'npm',
+      args: 'run dev',
+      cwd: '/opt/amast-crm/amast-crm/frontend',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'development',
+        PORT: 3001
+      },
+      error_file: './logs/pm2-frontend-error.log',
+      out_file: './logs/pm2-frontend-out.log',
+      time: true,
+      autorestart: true,
+      watch: false
+    }
+    */
   ]
 };
 

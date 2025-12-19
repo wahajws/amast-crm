@@ -7,6 +7,9 @@ echo "=========================================="
 # Navigate to project directory
 cd /opt/amast-crm/amast-crm || exit 1
 
+# Note: Frontend is built as static files and served by Nginx
+# No PM2 process needed for frontend in production
+
 # Check if PM2 is installed
 if ! command -v pm2 &> /dev/null; then
     echo "PM2 is not installed. Installing..."
