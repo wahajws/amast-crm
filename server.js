@@ -12,8 +12,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Trust proxy - Required when running behind Nginx or other reverse proxy
+// Set to 1 to trust only the first proxy (Nginx), which is more secure
 // This allows Express to correctly identify client IPs from X-Forwarded-For headers
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // Security middleware
 app.use(helmet());
@@ -67,6 +68,10 @@ const apiLimiter = rateLimit({
   skip: (req) => {
     return req.path === '/health' || req.path === '/api/health';
   },
+  // Skip trust proxy validation since we're behind Nginx (trust proxy: 1 is set)
+  validate: {
+    trustProxy: false // Skip validation - we trust Nginx as the first proxy
+  },
   // Note: Using IP-based limiting since authentication happens in route middleware
   // The limit is permissive enough (2000 req/15min) to handle normal CRM usage
   // This is approximately 2.2 requests per second, which is very reasonable
@@ -84,6 +89,10 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful requests
+  // Skip trust proxy validation since we're behind Nginx (trust proxy: 1 is set)
+  validate: {
+    trustProxy: false // Skip validation - we trust Nginx as the first proxy
+  }
 });
 
 // Apply API rate limiter to all routes except auth
