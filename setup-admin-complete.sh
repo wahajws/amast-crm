@@ -21,10 +21,13 @@ echo ""
 read -sp "Enter MySQL root password: " MYSQL_PASSWORD
 echo ""
 
+# Export for mysql command (to avoid command line warning)
+export MYSQL_PWD="$MYSQL_PASSWORD"
+
 # Step 1: Check if roles exist
 echo ""
 echo "Step 1: Checking if roles exist..."
-ROLE_COUNT=$(mysql -u root -p$MYSQL_PASSWORD crm_system -sN -e "SELECT COUNT(*) FROM roles;" 2>/dev/null)
+ROLE_COUNT=$(mysql -u root crm_system -sN -e "SELECT COUNT(*) FROM roles;" 2>/dev/null)
 
 if [ "$ROLE_COUNT" = "0" ] || [ -z "$ROLE_COUNT" ]; then
     echo "⚠️  No roles found. Running seed script..."
@@ -41,17 +44,17 @@ fi
 # Step 2: Verify SUPER_ADMIN role exists
 echo ""
 echo "Step 2: Verifying SUPER_ADMIN role..."
-ROLE_ID=$(mysql -u root -p$MYSQL_PASSWORD crm_system -sN -e "SELECT id FROM roles WHERE name = 'SUPER_ADMIN' LIMIT 1;" 2>/dev/null)
+ROLE_ID=$(mysql -u root crm_system -sN -e "SELECT id FROM roles WHERE name = 'SUPER_ADMIN' LIMIT 1;" 2>/dev/null)
 
 if [ -z "$ROLE_ID" ]; then
-    echo "✗ SUPER_ADMIN role not found!"
+    echo "⚠️  SUPER_ADMIN role not found!"
     echo "Creating SUPER_ADMIN role manually..."
-    mysql -u root -p$MYSQL_PASSWORD crm_system <<EOF
-INSERT INTO roles (name, description, created_at, updated_at)
-VALUES ('SUPER_ADMIN', 'Super Administrator with full system access', NOW(), NOW())
+    mysql -u root crm_system <<EOF
+INSERT INTO roles (name, display_name, description, is_system_role, created_at, updated_at)
+VALUES ('SUPER_ADMIN', 'Super Admin', 'Super Administrator with full system access', TRUE, NOW(), NOW())
 ON DUPLICATE KEY UPDATE name = name;
 EOF
-    ROLE_ID=$(mysql -u root -p$MYSQL_PASSWORD crm_system -sN -e "SELECT id FROM roles WHERE name = 'SUPER_ADMIN' LIMIT 1;" 2>/dev/null)
+    ROLE_ID=$(mysql -u root crm_system -sN -e "SELECT id FROM roles WHERE name = 'SUPER_ADMIN' LIMIT 1;" 2>/dev/null)
     
     if [ -z "$ROLE_ID" ]; then
         echo "✗ Failed to create SUPER_ADMIN role"
@@ -76,13 +79,13 @@ echo "✓ Password hashed"
 # Step 4: Check if admin exists
 echo ""
 echo "Step 4: Checking if admin user exists..."
-ADMIN_EXISTS=$(mysql -u root -p$MYSQL_PASSWORD crm_system -sN -e "SELECT COUNT(*) FROM users WHERE email = '$ADMIN_EMAIL';" 2>/dev/null)
+ADMIN_EXISTS=$(mysql -u root crm_system -sN -e "SELECT COUNT(*) FROM users WHERE email = '$ADMIN_EMAIL';" 2>/dev/null)
 
 if [ "$ADMIN_EXISTS" = "1" ]; then
     echo "✓ Admin user exists"
     echo ""
     echo "Updating password and status..."
-    mysql -u root -p$MYSQL_PASSWORD crm_system <<EOF
+    mysql -u root crm_system <<EOF
 UPDATE users 
 SET password_hash = '$HASHED_PASSWORD',
     status = 'ACTIVE',
@@ -101,7 +104,7 @@ else
     echo ""
     echo "Creating admin user..."
     
-    mysql -u root -p$MYSQL_PASSWORD crm_system <<EOF
+    mysql -u root crm_system <<EOF
 INSERT INTO users (email, password_hash, first_name, last_name, role_id, status, created_at, updated_at)
 VALUES ('$ADMIN_EMAIL', '$HASHED_PASSWORD', '$ADMIN_FIRST_NAME', '$ADMIN_LAST_NAME', $ROLE_ID, 'ACTIVE', NOW(), NOW());
 EOF
@@ -117,7 +120,10 @@ fi
 # Step 5: Verify
 echo ""
 echo "Step 5: Verifying admin user..."
-mysql -u root -p$MYSQL_PASSWORD crm_system -e "SELECT id, email, first_name, last_name, status, role_id FROM users WHERE email = '$ADMIN_EMAIL';" 2>/dev/null
+mysql -u root crm_system -e "SELECT id, email, first_name, last_name, status, role_id FROM users WHERE email = '$ADMIN_EMAIL';" 2>/dev/null
+
+# Unset password
+unset MYSQL_PWD
 
 # Step 6: Test login
 echo ""
