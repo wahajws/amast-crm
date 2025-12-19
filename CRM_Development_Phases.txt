@@ -1,0 +1,238 @@
+================================================================================
+                    CRM SYSTEM DEVELOPMENT - 3 PHASE PLAN
+================================================================================
+
+OVERVIEW:
+---------
+Building a complete CRM System with Gmail Integration using:
+- Backend: Node.js
+- Database: MySQL
+- Architecture: MVC with Clean Architecture
+
+================================================================================
+                        PHASE 1: FOUNDATION & USER MANAGEMENT
+================================================================================
+
+GOAL: Establish the foundation and user authentication system
+
+FEATURES:
+---------
+1. User Management System
+   - User registration/login
+   - Gmail OAuth2 authentication
+   - User profile management
+   - Session management (JWT tokens)
+   - Password reset (if needed)
+
+2. Database Setup
+   - MySQL database schema
+   - User tables
+   - Basic migrations
+
+3. Project Architecture
+   - MVC structure setup
+   - Clean architecture layers:
+     * Controllers (API endpoints)
+     * Services (Business logic)
+     * Repositories (Data access)
+     * Models (Data models)
+   - Configuration management
+   - Error handling middleware
+   - API routing structure
+
+4. Basic API Framework
+   - RESTful API endpoints
+   - Authentication middleware
+   - Request validation
+   - Response formatting
+
+DELIVERABLES:
+-------------
+✓ Users can register/login with Gmail
+✓ Secure authentication system
+✓ Solid project foundation
+✓ Database connection established
+
+CONSIDERATIONS:
+--------------
+- Security best practices
+- Database connection pooling
+- Environment configuration
+- Logging system
+- API documentation structure
+
+================================================================================
+                    PHASE 2: CORE CRM FEATURES (BUSINESS LOGIC)
+================================================================================
+
+GOAL: Implement core CRM functionality
+
+FEATURES:
+---------
+1. Contact Management
+   - Create, Read, Update, Delete contacts
+   - Contact fields (name, email, phone, address, company, etc.)
+   - Contact search and filtering
+   - Contact list view
+
+2. Account/Company Management
+   - Create, Read, Update, Delete accounts
+   - Account fields (company name, industry, address, website, etc.)
+   - Link contacts to accounts
+   - Account list view
+
+3. Notes System
+   - Create notes tagged to contacts
+   - Create notes tagged to accounts
+   - View notes on contact/account detail pages
+   - Edit/Delete notes
+   - Notes history/timeline
+
+4. Reminders System
+   - Create reminders for contacts
+   - Create reminders for accounts
+   - Reminder fields (title, description, due date/time, priority)
+   - View reminders list
+   - Mark reminders as complete
+   - Basic reminder notifications (in-app)
+
+5. Dashboard
+   - Overview statistics (total contacts, accounts, upcoming reminders)
+   - Recent activities
+   - Quick actions
+
+DELIVERABLES:
+-------------
+✓ Full CRUD for contacts and accounts
+✓ Notes linked to contacts/accounts
+✓ Reminders system functional
+✓ Basic dashboard
+✓ Users can manage their CRM data
+
+CONSIDERATIONS:
+--------------
+- Data validation
+- Relationship management (contacts ↔ accounts)
+- UI/UX for data entry
+- Pagination for lists
+- Data integrity constraints
+
+DEPENDENCIES:
+-------------
+- Phase 1 must be complete
+
+================================================================================
+              PHASE 3: GMAIL INTEGRATION & ADVANCED FEATURES
+================================================================================
+
+GOAL: Integrate Gmail and add advanced capabilities
+
+FEATURES:
+---------
+1. Gmail OAuth Integration (Advanced)
+   - Store Gmail credentials/tokens securely
+   - Token refresh mechanism
+   - Multiple Gmail account support (if needed)
+
+2. Gmail Folder/Label Reading
+   - Connect to Gmail API
+   - List user's Gmail labels/folders
+   - Display folders in CRM interface
+   - Allow user to select which folders to sync
+
+3. Email Sync System
+   - Sync emails from selected Gmail folders
+   - Match folder names to contacts/accounts (auto-create if needed)
+   - Store email threads/conversations
+   - Store email metadata (subject, sender, date, body, attachments info)
+   - Handle email sync scheduling (manual + automated)
+
+4. Email Management in CRM
+   - View emails linked to contacts/accounts
+   - Display email threads/conversations
+   - Search emails
+   - Link emails to notes
+   - Email timeline view
+
+5. Advanced Reminders
+   - Email-based reminders (remind about unread emails)
+   - Recurring reminders
+   - Email notifications for reminders
+   - Reminder dashboard/widget
+
+6. Enhanced Features
+   - Activity timeline (shows all activities: notes, emails, reminders)
+   - Advanced search (across contacts, accounts, emails, notes)
+   - Data export (CSV/JSON)
+   - Email templates (if sending emails from CRM)
+   - Bulk operations
+
+DELIVERABLES:
+-------------
+✓ Gmail integration complete
+✓ Emails synced and stored
+✓ Email threads viewable in CRM
+✓ Advanced reminder system
+✓ Complete CRM system operational
+
+CONSIDERATIONS:
+--------------
+- Gmail API rate limits
+- Email sync performance (large volumes)
+- Data storage optimization
+- Error handling for API failures
+- Background job processing (for scheduled syncs)
+
+DEPENDENCIES:
+-------------
+- Phase 1 must be complete
+- Phase 2 must be complete
+
+================================================================================
+                        PHASE BREAKDOWN SUMMARY
+================================================================================
+
+Phase          Duration Estimate    Key Focus              Dependencies
+------------------------------------------------------------------------
+Phase 1        1-2 weeks            Foundation & Auth      None
+Phase 2        2-3 weeks            Core CRM Features      Phase 1 complete
+Phase 3        2-3 weeks            Gmail Integration      Phase 1 & 2 complete
+
+TOTAL ESTIMATED DURATION: 5-8 weeks
+
+================================================================================
+                        KEY REQUIREMENTS SUMMARY
+================================================================================
+
+CORE FEATURES:
+-------------
+1. Notes tagged to accounts
+2. Notes tagged to contacts
+3. Reminders feature at both contact and account level
+4. Gmail integration:
+   - Gmail OAuth2 login (users authenticate with Gmail)
+   - Users create folders/labels in Gmail inbox with customer names
+   - CRM reads these folders and syncs emails
+   - CRM stores email threads/conversations
+   - Emails are linked to contacts/accounts based on folder name
+
+TECHNICAL STACK:
+---------------
+- Backend: Node.js
+- Database: MySQL
+- Architecture: MVC with Clean Architecture
+
+================================================================================
+                        NOTES & CLARIFICATIONS
+================================================================================
+
+[Add any additional notes, clarifications, or decisions made during development]
+
+================================================================================
+
+
+
+
+
+
+

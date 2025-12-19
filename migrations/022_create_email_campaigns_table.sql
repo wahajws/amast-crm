@@ -1,0 +1,42 @@
+-- Create email_campaigns table for tracking generated emails
+CREATE TABLE IF NOT EXISTS email_campaigns (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  contact_id INT NOT NULL COMMENT 'Contact this email is for',
+  account_id INT DEFAULT NULL COMMENT 'Account this email is for',
+  email_subject VARCHAR(255) NOT NULL COMMENT 'Email subject line',
+  email_template TEXT NOT NULL COMMENT 'Email body/template',
+  status ENUM('DRAFT', 'PENDING', 'SENT', 'OPENED', 'REPLIED', 'BOUNCED') DEFAULT 'PENDING' COMMENT 'Email status',
+  priority ENUM('LOW', 'MEDIUM', 'HIGH', 'URGENT') DEFAULT 'MEDIUM' COMMENT 'Email priority',
+  sent_at TIMESTAMP NULL DEFAULT NULL COMMENT 'When email was sent',
+  sent_by INT DEFAULT NULL COMMENT 'User who sent the email',
+  opened_at TIMESTAMP NULL DEFAULT NULL COMMENT 'When email was opened (if tracked)',
+  replied_at TIMESTAMP NULL DEFAULT NULL COMMENT 'When email was replied to (if tracked)',
+  communication_started BOOLEAN DEFAULT FALSE COMMENT 'Has communication started with client',
+  scheduled_send_at TIMESTAMP NULL DEFAULT NULL COMMENT 'Scheduled send date/time',
+  notes TEXT DEFAULT NULL COMMENT 'Additional notes',
+  owner_id INT NOT NULL COMMENT 'Owner of this email campaign',
+  created_by INT NOT NULL COMMENT 'User who created this campaign',
+  updated_by INT DEFAULT NULL COMMENT 'User who last updated this campaign',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL DEFAULT NULL COMMENT 'Soft delete timestamp',
+  
+  INDEX idx_contact_id (contact_id),
+  INDEX idx_account_id (account_id),
+  INDEX idx_status (status),
+  INDEX idx_priority (priority),
+  INDEX idx_sent_at (sent_at),
+  INDEX idx_sent_by (sent_by),
+  INDEX idx_communication_started (communication_started),
+  INDEX idx_owner_id (owner_id),
+  INDEX idx_created_at (created_at),
+  INDEX idx_deleted_at (deleted_at),
+  
+  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE CASCADE,
+  FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE SET NULL,
+  FOREIGN KEY (sent_by) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Email campaigns and tracking';
+

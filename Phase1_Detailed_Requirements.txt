@@ -1,0 +1,709 @@
+================================================================================
+                    PHASE 1: FOUNDATION & USER MANAGEMENT
+                        DETAILED REQUIREMENTS DOCUMENT
+================================================================================
+
+GOAL: Establish the foundation, user authentication, and role-based access control
+
+================================================================================
+                        1. USER ROLES MANAGEMENT
+================================================================================
+
+USER ROLES:
+-----------
+1. SUPER ADMIN
+   - Highest level of access
+   - Full system control
+   - Can manage all users and roles
+   - Can access all features and data
+   - Cannot be deleted or demoted
+
+2. ADMIN
+   - Full access to CRM features
+   - Can manage users (except Super Admin)
+   - Can view all contacts, accounts, notes, reminders
+   - Can manage system settings
+   - Can assign roles to users
+
+3. MANAGER
+   - Can view and manage contacts/accounts assigned to their team
+   - Can create/edit/delete contacts and accounts
+   - Can view team members' activities
+   - Can create notes and reminders
+   - Cannot manage users or system settings
+   - Limited access to reports
+
+4. USER (Standard User)
+   - Can view and manage only their own contacts/accounts
+   - Can create/edit/delete their own contacts and accounts
+   - Can create notes and reminders for their contacts/accounts
+   - Cannot view other users' data
+   - Cannot manage users
+   - Basic dashboard access
+
+5. VIEWER (Read-Only)
+   - Can only view contacts, accounts, notes, reminders
+   - Cannot create, edit, or delete anything
+   - Limited dashboard access
+   - No user management access
+
+ROLE PERMISSIONS MATRIX:
+------------------------
+Feature                    | Super Admin | Admin | Manager | User | Viewer
+---------------------------|-------------|-------|---------|------|--------
+User Management            | ✓ Full      | ✓ Full| ✗       | ✗    | ✗
+Role Management            | ✓ Full      | ✓ Full| ✗       | ✗    | ✗
+View All Contacts          | ✓           | ✓     | ✓ Team  | ✗    | ✓
+Create Contacts            | ✓           | ✓     | ✓       | ✓ Own| ✗
+Edit Contacts              | ✓           | ✓     | ✓ Team  | ✓ Own| ✗
+Delete Contacts            | ✓           | ✓     | ✓ Team  | ✓ Own| ✗
+View All Accounts          | ✓           | ✓     | ✓ Team  | ✗    | ✓
+Create Accounts            | ✓           | ✓     | ✓       | ✓ Own| ✗
+Edit Accounts              | ✓           | ✓     | ✓ Team  | ✓ Own| ✗
+Delete Accounts            | ✓           | ✓     | ✓ Team  | ✓ Own| ✗
+View All Notes             | ✓           | ✓     | ✓ Team  | ✗    | ✓
+Create Notes               | ✓           | ✓     | ✓       | ✓ Own| ✗
+Edit Notes                 | ✓           | ✓     | ✓ Team  | ✓ Own| ✗
+Delete Notes               | ✓           | ✓     | ✓ Team  | ✓ Own| ✗
+View All Reminders         | ✓           | ✓     | ✓ Team  | ✗    | ✓
+Create Reminders           | ✓           | ✓     | ✓       | ✓ Own| ✗
+Edit Reminders             | ✓           | ✓     | ✓ Team  | ✓ Own| ✗
+Delete Reminders           | ✓           | ✓     | ✓ Team  | ✓ Own| ✗
+Gmail Integration          | ✓           | ✓     | ✓       | ✓    | ✗
+Email Sync                 | ✓           | ✓     | ✓       | ✓    | ✗
+View All Emails            | ✓           | ✓     | ✓ Team  | ✗    | ✓
+System Settings            | ✓           | ✓     | ✗       | ✗    | ✗
+Reports & Analytics        | ✓ Full      | ✓ Full| ✓ Basic | ✗    | ✗
+Dashboard                  | ✓ Full      | ✓ Full| ✓ Team  | ✓ Own| ✓ Basic
+
+================================================================================
+                    2. DEFAULT ADMIN CREATION
+================================================================================
+
+ON APPLICATION STARTUP:
+-----------------------
+- When application starts for the first time, check if any Super Admin exists
+- If no Super Admin exists, create default Super Admin with:
+  * Email: admin@crm.local (or configurable)
+  * Password: (set via environment variable or first-time setup)
+  * Role: SUPER_ADMIN
+  * Status: ACTIVE
+  * Created automatically on first run
+
+DEFAULT ADMIN CREDENTIALS:
+---------------------------
+- Should be configurable via environment variables:
+  * DEFAULT_ADMIN_EMAIL
+  * DEFAULT_ADMIN_PASSWORD
+  * DEFAULT_ADMIN_FIRST_NAME
+  * DEFAULT_ADMIN_LAST_NAME
+
+SECURITY:
+---------
+- Force password change on first login
+- Log default admin creation
+- Warn if default credentials are still in use
+
+================================================================================
+                        3. DATABASE SCHEMA
+================================================================================
+
+TABLES REQUIRED:
+---------------
+
+1. users
+   - id (INT, PRIMARY KEY, AUTO_INCREMENT)
+   - email (VARCHAR(255), UNIQUE, NOT NULL)
+   - password_hash (VARCHAR(255), NULL - for OAuth users)
+   - first_name (VARCHAR(100))
+   - last_name (VARCHAR(100))
+   - profile_picture (VARCHAR(500), NULL)
+   - role_id (INT, FOREIGN KEY -> roles.id)
+   - status (ENUM: 'ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING')
+   - gmail_access_token (TEXT, NULL)
+   - gmail_refresh_token (TEXT, NULL)
+   - gmail_token_expiry (DATETIME, NULL)
+   - last_login (DATETIME, NULL)
+   - created_at (DATETIME, DEFAULT CURRENT_TIMESTAMP)
+   - updated_at (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE)
+   - created_by (INT, FOREIGN KEY -> users.id, NULL)
+   - updated_by (INT, FOREIGN KEY -> users.id, NULL)
+
+2. roles
+   - id (INT, PRIMARY KEY, AUTO_INCREMENT)
+   - name (VARCHAR(50), UNIQUE, NOT NULL) - 'SUPER_ADMIN', 'ADMIN', 'MANAGER', 'USER', 'VIEWER'
+   - display_name (VARCHAR(100))
+   - description (TEXT)
+   - is_system_role (BOOLEAN, DEFAULT FALSE) - Cannot be deleted if true
+   - created_at (DATETIME, DEFAULT CURRENT_TIMESTAMP)
+   - updated_at (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE)
+
+3. permissions
+   - id (INT, PRIMARY KEY, AUTO_INCREMENT)
+   - name (VARCHAR(100), UNIQUE, NOT NULL) - e.g., 'users.create', 'contacts.view_all'
+   - display_name (VARCHAR(200))
+   - description (TEXT)
+   - resource (VARCHAR(50)) - 'users', 'contacts', 'accounts', 'notes', 'reminders', 'emails', 'system'
+   - action (VARCHAR(50)) - 'create', 'read', 'update', 'delete', 'view_all', 'manage'
+   - created_at (DATETIME, DEFAULT CURRENT_TIMESTAMP)
+
+4. role_permissions
+   - id (INT, PRIMARY KEY, AUTO_INCREMENT)
+   - role_id (INT, FOREIGN KEY -> roles.id)
+   - permission_id (INT, FOREIGN KEY -> permissions.id)
+   - UNIQUE(role_id, permission_id)
+   - created_at (DATETIME, DEFAULT CURRENT_TIMESTAMP)
+
+5. user_sessions
+   - id (INT, PRIMARY KEY, AUTO_INCREMENT)
+   - user_id (INT, FOREIGN KEY -> users.id)
+   - token (VARCHAR(500), UNIQUE, NOT NULL)
+   - refresh_token (VARCHAR(500), UNIQUE, NULL)
+   - ip_address (VARCHAR(45))
+   - user_agent (TEXT)
+   - expires_at (DATETIME, NOT NULL)
+   - is_active (BOOLEAN, DEFAULT TRUE)
+   - created_at (DATETIME, DEFAULT CURRENT_TIMESTAMP)
+   - last_activity (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE)
+
+6. audit_logs
+   - id (INT, PRIMARY KEY, AUTO_INCREMENT)
+   - user_id (INT, FOREIGN KEY -> users.id, NULL)
+   - action (VARCHAR(100)) - 'LOGIN', 'LOGOUT', 'CREATE', 'UPDATE', 'DELETE', etc.
+   - resource_type (VARCHAR(50)) - 'user', 'contact', 'account', etc.
+   - resource_id (INT, NULL)
+   - description (TEXT)
+   - ip_address (VARCHAR(45))
+   - user_agent (TEXT)
+   - created_at (DATETIME, DEFAULT CURRENT_TIMESTAMP)
+
+INDEXES:
+--------
+- users.email (UNIQUE INDEX)
+- users.role_id (INDEX)
+- users.status (INDEX)
+- user_sessions.token (UNIQUE INDEX)
+- user_sessions.user_id (INDEX)
+- audit_logs.user_id (INDEX)
+- audit_logs.created_at (INDEX)
+- role_permissions.role_id (INDEX)
+- role_permissions.permission_id (INDEX)
+
+================================================================================
+                    4. PROJECT ARCHITECTURE (MVC + CLEAN)
+================================================================================
+
+FOLDER STRUCTURE:
+-----------------
+crm-system/
+├── config/
+│   ├── database.js          # MySQL connection configuration
+│   ├── jwt.js               # JWT configuration
+│   ├── gmail.js             # Gmail OAuth configuration
+│   └── constants.js         # Application constants
+│
+├── models/
+│   ├── User.js              # User model
+│   ├── Role.js              # Role model
+│   ├── Permission.js        # Permission model
+│   └── index.js             # Model exports
+│
+├── repositories/
+│   ├── UserRepository.js    # User data access layer
+│   ├── RoleRepository.js    # Role data access layer
+│   ├── PermissionRepository.js
+│   ├── SessionRepository.js
+│   └── AuditLogRepository.js
+│
+├── services/
+│   ├── AuthService.js       # Authentication business logic
+│   ├── UserService.js       # User management business logic
+│   ├── RoleService.js       # Role management business logic
+│   ├── GmailService.js      # Gmail OAuth business logic
+│   └── PermissionService.js # Permission checking logic
+│
+├── controllers/
+│   ├── AuthController.js    # Authentication endpoints
+│   ├── UserController.js    # User management endpoints
+│   ├── RoleController.js    # Role management endpoints
+│   └── ProfileController.js # User profile endpoints
+│
+├── middleware/
+│   ├── auth.js              # JWT authentication middleware
+│   ├── authorize.js         # Role-based authorization middleware
+│   ├── validate.js          # Request validation middleware
+│   ├── errorHandler.js      # Error handling middleware
+│   └── logger.js             # Request logging middleware
+│
+├── routes/
+│   ├── auth.routes.js       # Authentication routes
+│   ├── user.routes.js       # User routes
+│   ├── role.routes.js       # Role routes
+│   └── index.js             # Route aggregator
+│
+├── utils/
+│   ├── validators.js        # Validation functions
+│   ├── helpers.js           # Helper functions
+│   ├── logger.js            # Logging utility
+│   └── encryption.js        # Encryption utilities
+│
+├── migrations/
+│   ├── 001_create_roles_table.sql
+│   ├── 002_create_permissions_table.sql
+│   ├── 003_create_users_table.sql
+│   ├── 004_create_role_permissions_table.sql
+│   ├── 005_create_user_sessions_table.sql
+│   ├── 006_create_audit_logs_table.sql
+│   └── 007_seed_default_data.sql
+│
+├── seeds/
+│   ├── roles.seed.js        # Default roles
+│   ├── permissions.seed.js  # Default permissions
+│   └── defaultAdmin.seed.js # Default admin user
+│
+├── .env                     # Environment variables
+├── .env.example             # Environment variables template
+├── server.js                # Application entry point
+└── package.json             # Dependencies
+
+ARCHITECTURE LAYERS:
+-------------------
+1. Controllers Layer
+   - Handle HTTP requests/responses
+   - Input validation
+   - Call services
+   - Return formatted responses
+
+2. Services Layer
+   - Business logic
+   - Data validation
+   - Call repositories
+   - Handle transactions
+   - Error handling
+
+3. Repositories Layer
+   - Database queries
+   - Data access only
+   - No business logic
+   - Return raw data
+
+4. Models Layer
+   - Data structure definitions
+   - Data validation rules
+   - Relationships
+
+================================================================================
+                    5. AUTHENTICATION SYSTEM
+================================================================================
+
+AUTHENTICATION METHODS:
+----------------------
+1. Gmail OAuth2 Authentication
+   - User clicks "Login with Gmail"
+   - Redirect to Google OAuth consent screen
+   - User grants permissions
+   - Receive authorization code
+   - Exchange code for access token and refresh token
+   - Store tokens securely
+   - Create/update user account
+   - Generate JWT token for session
+
+2. Email/Password Authentication (Optional for non-Gmail users)
+   - User provides email and password
+   - Verify credentials
+   - Generate JWT token
+
+JWT TOKEN STRUCTURE:
+-------------------
+{
+  "userId": 1,
+  "email": "user@example.com",
+  "role": "ADMIN",
+  "permissions": ["users.create", "contacts.view_all", ...],
+  "iat": 1234567890,
+  "exp": 1234571490
+}
+
+TOKEN MANAGEMENT:
+----------------
+- Access Token: Short-lived (15 minutes - 1 hour)
+- Refresh Token: Long-lived (7-30 days)
+- Token stored in HTTP-only cookies or Authorization header
+- Refresh token rotation on use
+- Token blacklist for logout
+
+SESSION MANAGEMENT:
+-------------------
+- Store active sessions in database
+- Track last activity
+- Auto-logout on token expiry
+- Force logout capability (admin)
+- Session cleanup job (remove expired sessions)
+
+================================================================================
+                    6. API ENDPOINTS
+================================================================================
+
+AUTHENTICATION ENDPOINTS:
+------------------------
+POST   /api/auth/register              # Register new user (if email/password enabled)
+POST   /api/auth/login                  # Login with email/password
+GET    /api/auth/gmail                  # Initiate Gmail OAuth
+GET    /api/auth/gmail/callback         # Gmail OAuth callback
+POST   /api/auth/refresh                # Refresh access token
+POST   /api/auth/logout                 # Logout user
+GET    /api/auth/me                     # Get current user info
+POST   /api/auth/change-password        # Change password
+
+USER MANAGEMENT ENDPOINTS:
+--------------------------
+GET    /api/users                       # List users (with filters, pagination)
+GET    /api/users/:id                   # Get user by ID
+POST   /api/users                       # Create user (Admin only)
+PUT    /api/users/:id                   # Update user
+DELETE /api/users/:id                   # Delete user (cannot delete self or Super Admin)
+GET    /api/users/:id/activity          # Get user activity log
+PUT    /api/users/:id/status            # Update user status (activate/deactivate)
+GET    /api/users/:id/permissions       # Get user permissions
+
+ROLE MANAGEMENT ENDPOINTS:
+--------------------------
+GET    /api/roles                       # List all roles
+GET    /api/roles/:id                   # Get role by ID
+POST   /api/roles                       # Create role (Super Admin/Admin only)
+PUT    /api/roles/:id                   # Update role
+DELETE /api/roles/:id                   # Delete role (cannot delete system roles)
+GET    /api/roles/:id/permissions       # Get role permissions
+PUT    /api/roles/:id/permissions       # Update role permissions
+
+PERMISSION ENDPOINTS:
+--------------------
+GET    /api/permissions                 # List all permissions
+GET    /api/permissions/:id             # Get permission by ID
+
+PROFILE ENDPOINTS:
+-----------------
+GET    /api/profile                     # Get current user profile
+PUT    /api/profile                     # Update current user profile
+PUT    /api/profile/password            # Change own password
+GET    /api/profile/sessions            # Get user's active sessions
+DELETE /api/profile/sessions/:id       # Revoke specific session
+
+AUDIT LOG ENDPOINTS:
+--------------------
+GET    /api/audit-logs                  # Get audit logs (Admin only, with filters)
+
+================================================================================
+                    7. MIDDLEWARE & SECURITY
+================================================================================
+
+AUTHENTICATION MIDDLEWARE:
+-------------------------
+- Verify JWT token
+- Check token expiry
+- Validate token signature
+- Load user from database
+- Attach user to request object
+
+AUTHORIZATION MIDDLEWARE:
+------------------------
+- Check user role
+- Verify permissions
+- Resource ownership validation (for User role)
+- Team access validation (for Manager role)
+
+VALIDATION MIDDLEWARE:
+---------------------
+- Request body validation
+- Query parameter validation
+- Input sanitization
+- SQL injection prevention
+- XSS prevention
+
+SECURITY FEATURES:
+-----------------
+- Password hashing (bcrypt)
+- JWT token signing
+- HTTPS enforcement (production)
+- CORS configuration
+- Rate limiting
+- Request size limits
+- SQL injection prevention
+- XSS protection
+- CSRF protection (if using cookies)
+
+ERROR HANDLING:
+--------------
+- Centralized error handler
+- Standardized error responses
+- Error logging
+- Development vs Production error messages
+- HTTP status code standards
+
+================================================================================
+                    8. VIEWS & PERMISSIONS BY ROLE
+================================================================================
+
+SUPER ADMIN VIEWS:
+-----------------
+- Full system dashboard
+- All users list and management
+- All roles and permissions management
+- System settings
+- All contacts, accounts, notes, reminders
+- All emails and Gmail integrations
+- Complete audit logs
+- System reports and analytics
+- User activity monitoring
+
+ADMIN VIEWS:
+------------
+- Full CRM dashboard
+- User management (except Super Admin)
+- Role management (except Super Admin role)
+- All contacts, accounts, notes, reminders
+- All emails and Gmail integrations
+- Team reports and analytics
+- Audit logs (filtered)
+- System settings (limited)
+
+MANAGER VIEWS:
+--------------
+- Team dashboard
+- Team members' contacts and accounts
+- Own contacts and accounts
+- Team notes and reminders
+- Team emails
+- Team activity timeline
+- Basic reports (team only)
+- Cannot access user management
+- Cannot access system settings
+
+USER VIEWS:
+-----------
+- Personal dashboard
+- Own contacts only
+- Own accounts only
+- Own notes and reminders
+- Own emails
+- Personal activity timeline
+- Cannot view other users' data
+- Cannot access reports
+- Cannot access user management
+
+VIEWER VIEWS:
+-------------
+- Read-only dashboard
+- View all contacts (read-only)
+- View all accounts (read-only)
+- View all notes (read-only)
+- View all reminders (read-only)
+- View all emails (read-only)
+- Cannot create, edit, or delete anything
+- No user management access
+
+================================================================================
+                    9. DATABASE INITIALIZATION
+================================================================================
+
+SEED DATA:
+----------
+1. Default Roles:
+   - SUPER_ADMIN
+   - ADMIN
+   - MANAGER
+   - USER
+   - VIEWER
+
+2. Default Permissions:
+   - users.create, users.read, users.update, users.delete, users.view_all
+   - roles.create, roles.read, roles.update, roles.delete
+   - contacts.create, contacts.read, contacts.update, contacts.delete, contacts.view_all
+   - accounts.create, accounts.read, accounts.update, accounts.delete, accounts.view_all
+   - notes.create, notes.read, notes.update, notes.delete, notes.view_all
+   - reminders.create, reminders.read, reminders.update, reminders.delete, reminders.view_all
+   - emails.read, emails.sync, emails.view_all
+   - system.settings, system.reports
+
+3. Role-Permission Mappings:
+   - Map permissions to each role based on permissions matrix
+
+4. Default Super Admin:
+   - Created on first application start
+   - Credentials from environment variables
+
+MIGRATION STRATEGY:
+------------------
+- Run migrations on application start (development)
+- Separate migration scripts for production
+- Version control for database schema
+- Rollback capability
+
+================================================================================
+                    10. CONFIGURATION & ENVIRONMENT
+================================================================================
+
+ENVIRONMENT VARIABLES:
+---------------------
+# Server
+PORT=3000
+NODE_ENV=development|production
+
+# Database
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=crm_system
+DB_PORT=3306
+DB_CONNECTION_LIMIT=10
+
+# JWT
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=1h
+JWT_REFRESH_EXPIRES_IN=7d
+
+# Gmail OAuth
+GMAIL_CLIENT_ID=your-client-id
+GMAIL_CLIENT_SECRET=your-client-secret
+GMAIL_REDIRECT_URI=http://localhost:3000/api/auth/gmail/callback
+
+# Default Admin
+DEFAULT_ADMIN_EMAIL=admin@crm.local
+DEFAULT_ADMIN_PASSWORD=ChangeMe123!
+DEFAULT_ADMIN_FIRST_NAME=Admin
+DEFAULT_ADMIN_LAST_NAME=User
+
+# Security
+BCRYPT_ROUNDS=10
+SESSION_SECRET=your-session-secret
+
+# Logging
+LOG_LEVEL=info|debug|error
+LOG_FILE=logs/app.log
+
+================================================================================
+                    11. LOGGING & MONITORING
+================================================================================
+
+AUDIT LOGGING:
+--------------
+- User login/logout
+- User creation/update/deletion
+- Role changes
+- Permission changes
+- Data access (sensitive operations)
+- Failed authentication attempts
+- System errors
+
+LOG LEVELS:
+-----------
+- ERROR: System errors, exceptions
+- WARN: Warning messages, failed operations
+- INFO: General information, successful operations
+- DEBUG: Detailed debugging information
+
+LOG STORAGE:
+------------
+- Database (audit_logs table)
+- File system (application logs)
+- Console output (development)
+
+================================================================================
+                    12. TESTING REQUIREMENTS
+================================================================================
+
+UNIT TESTS:
+----------
+- Service layer functions
+- Repository functions
+- Utility functions
+- Validation functions
+
+INTEGRATION TESTS:
+-----------------
+- API endpoints
+- Authentication flow
+- Authorization checks
+- Database operations
+
+TEST COVERAGE:
+--------------
+- Minimum 70% code coverage
+- Critical paths: 100% coverage
+- Authentication: 100% coverage
+- Authorization: 100% coverage
+
+================================================================================
+                    13. DELIVERABLES CHECKLIST
+================================================================================
+
+✓ Project structure with MVC + Clean Architecture
+✓ Database schema with all tables
+✓ Database migrations and seeds
+✓ User authentication (Gmail OAuth2 + Email/Password)
+✓ JWT token management
+✓ User roles and permissions system
+✓ Default Super Admin creation
+✓ Role-based access control middleware
+✓ User management API endpoints
+✓ Role management API endpoints
+✓ Profile management endpoints
+✓ Audit logging system
+✓ Error handling middleware
+✓ Request validation
+✓ Security implementations
+✓ API documentation structure
+✓ Logging system
+✓ Configuration management
+✓ Database connection pooling
+✓ Session management
+
+================================================================================
+                    14. DEPENDENCIES
+================================================================================
+
+REQUIRED PACKAGES:
+-----------------
+- express: Web framework
+- mysql2: MySQL driver
+- dotenv: Environment variables
+- googleapis: Gmail API integration
+- bcryptjs: Password hashing
+- jsonwebtoken: JWT tokens
+- cors: CORS middleware
+- express-validator: Request validation
+- node-cron: Scheduled tasks (for session cleanup)
+- winston: Logging (optional)
+- helmet: Security headers (optional)
+
+================================================================================
+                    15. SUCCESS CRITERIA
+================================================================================
+
+PHASE 1 IS COMPLETE WHEN:
+-------------------------
+1. Users can register/login with Gmail OAuth2
+2. Users can login with email/password (if enabled)
+3. Default Super Admin is created on first run
+4. Role-based access control is fully functional
+5. All user management endpoints work correctly
+6. All role management endpoints work correctly
+7. Permissions are properly enforced
+8. Audit logging captures all important events
+9. JWT authentication is secure and working
+10. Database schema is complete and tested
+11. Error handling is comprehensive
+12. API is well-structured and documented
+13. Security best practices are implemented
+14. Code follows clean architecture principles
+
+================================================================================
+                        END OF PHASE 1 REQUIREMENTS
+================================================================================
+
+
+
+
+
+
+

@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  body {
+    @apply bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 text-gray-900 font-sans antialiased;
+    background-attachment: fixed;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Premium Button Styles */
+  .btn {
+    @apply px-5 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white
+           transform hover:scale-[1.02] active:scale-[0.98] shadow-sm hover:shadow-md;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-600 to-primary-500 text-white 
+           hover:from-primary-700 hover:to-primary-600 
+           focus:ring-primary-500 shadow-primary-500/20 hover:shadow-primary-500/30;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-secondary-700 border border-secondary-200 
+           hover:bg-secondary-50 hover:border-secondary-300 
+           focus:ring-secondary-500 shadow-sm hover:shadow;
+  }
+  
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-600 to-red-500 text-white 
+           hover:from-red-700 hover:to-red-600 
+           focus:ring-red-500 shadow-red-500/20 hover:shadow-red-500/30;
+  }
+  
+  .btn-outline {
+    @apply border-2 border-primary-500 text-primary-600 bg-white
+           hover:bg-primary-50 hover:border-primary-600 
+           focus:ring-primary-500;
+  }
+  
+  /* Premium Input Styles */
+  .input {
+    @apply w-full px-4 py-2.5 border border-secondary-200 rounded-xl 
+           bg-white text-gray-900 placeholder:text-secondary-400
+           focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 
+           transition-all duration-200 shadow-sm hover:shadow;
+  }
+  
+  /* Premium Card Styles */
+  .card {
+    @apply bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft border border-white/50 p-6
+           transition-all duration-300 hover:shadow-medium hover:border-primary-100;
+  }
+  
+  /* Premium Table Styles */
+  .table {
+    @apply w-full border-collapse;
+  }
+  
+  .table th {
+    @apply px-6 py-4 text-left text-xs font-bold text-secondary-600 uppercase tracking-wider 
+           bg-gradient-to-b from-secondary-50 to-white border-b-2 border-secondary-200;
+  }
+  
+  .table td {
+    @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-secondary-100;
+  }
+  
+  .table tr {
+    @apply transition-colors duration-150;
+  }
+  
+  .table tr:hover {
+    @apply bg-gradient-to-r from-primary-50/50 to-transparent;
+  }
+  
+  /* Premium Badge Styles */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold
+           shadow-sm border;
+  }
+  
+  .badge-success {
+    @apply bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 
+           border-emerald-200 shadow-emerald-500/10;
+  }
+  
+  .badge-warning {
+    @apply bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 
+           border-amber-200 shadow-amber-500/10;
+  }
+  
+  .badge-danger {
+    @apply bg-gradient-to-r from-red-50 to-rose-50 text-red-700 
+           border-red-200 shadow-red-500/10;
+  }
+  
+  .badge-info {
+    @apply bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 
+           border-blue-200 shadow-blue-500/10;
+  }
+  
+  .badge-gray {
+    @apply bg-gradient-to-r from-secondary-50 to-slate-50 text-secondary-700 
+           border-secondary-200 shadow-secondary-500/10;
+  }
+  
+  /* Premium Select Styles */
+  select.input {
+    @apply appearance-none bg-white pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+  }
+}
+
+/* AMAST Logo Animation */
+@keyframes pulse-network {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.network-node {
+  animation: pulse-network 2s ease-in-out infinite;
+}
+
+.network-node:nth-child(1) { animation-delay: 0s; }
+.network-node:nth-child(2) { animation-delay: 0.2s; }
+.network-node:nth-child(3) { animation-delay: 0.4s; }
+.network-node:nth-child(4) { animation-delay: 0.6s; }
+.network-node:nth-child(5) { animation-delay: 0.8s; }
+
