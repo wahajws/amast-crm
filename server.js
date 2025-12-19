@@ -19,20 +19,33 @@ const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
   : ['http://localhost:3001', 'http://47.250.126.192', 'https://tmybaiki.amastsales-sandbox.com', 'http://tmybaiki.amastsales-sandbox.com'];
 
+// Log allowed origins for debugging
+console.log('CORS Allowed Origins:', allowedOrigins);
+
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('CORS: No origin header, allowing request');
+      return callback(null, true);
+    }
+    
+    console.log('CORS: Request from origin:', origin);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('CORS: Origin allowed');
       callback(null, true);
     } else {
-      callback(null, true); // Allow all origins in development, restrict in production
+      console.log('CORS: Origin not in allowed list, but allowing anyway');
+      callback(null, true); // Allow all origins for now
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 
 // Rate limiting - More permissive for authenticated API routes
