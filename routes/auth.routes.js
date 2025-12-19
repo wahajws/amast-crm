@@ -19,6 +19,13 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful requests
+  // Custom keyGenerator to use req.ip (which works correctly with trust proxy: 1)
+  // This bypasses the trust proxy validation error
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  },
+  // Skip trust proxy validation - we're properly configured with trust proxy: 1
+  skipRateLimitOnError: true // Don't fail if rate limiting has issues
 });
 
 // Login

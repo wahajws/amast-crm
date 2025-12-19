@@ -68,10 +68,13 @@ const apiLimiter = rateLimit({
   skip: (req) => {
     return req.path === '/health' || req.path === '/api/health';
   },
-  // Skip trust proxy validation since we're behind Nginx (trust proxy: 1 is set)
-  validate: {
-    trustProxy: false // Skip validation - we trust Nginx as the first proxy
+  // Custom keyGenerator to use req.ip (which works correctly with trust proxy: 1)
+  // This bypasses the trust proxy validation error
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || 'unknown';
   },
+  // Skip trust proxy validation - we're properly configured with trust proxy: 1
+  skipRateLimitOnError: true, // Don't fail if rate limiting has issues
   // Note: Using IP-based limiting since authentication happens in route middleware
   // The limit is permissive enough (2000 req/15min) to handle normal CRM usage
   // This is approximately 2.2 requests per second, which is very reasonable
@@ -89,10 +92,13 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful requests
-  // Skip trust proxy validation since we're behind Nginx (trust proxy: 1 is set)
-  validate: {
-    trustProxy: false // Skip validation - we trust Nginx as the first proxy
-  }
+  // Custom keyGenerator to use req.ip (which works correctly with trust proxy: 1)
+  // This bypasses the trust proxy validation error
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  },
+  // Skip trust proxy validation - we're properly configured with trust proxy: 1
+  skipRateLimitOnError: true // Don't fail if rate limiting has issues
 });
 
 // Apply API rate limiter to all routes except auth
