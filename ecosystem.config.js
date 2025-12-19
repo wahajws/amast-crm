@@ -15,13 +15,15 @@ module.exports = {
       log_file: './logs/pm2-combined.log',
       time: true,
       autorestart: true,
-      max_restarts: 10,
+      max_restarts: 5,  // Reduced to prevent rapid restart loops
       min_uptime: '10s',
       max_memory_restart: '1G',
       watch: false,
       ignore_watch: ['node_modules', 'logs', '.git'],
       merge_logs: true,
-      kill_timeout: 5000
+      kill_timeout: 5000,
+      wait_ready: true,  // Wait for app to be ready
+      listen_timeout: 10000  // Wait 10s for app to start listening
     }
     // Note: Frontend is built as static files and served by Nginx
     // No PM2 process needed for frontend in production
