@@ -8,7 +8,7 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PORT: process.env.PORT || 3000  // Port managed by Nginx reverse proxy
+        PORT: process.env.PORT || 3001  // Changed to 3001 to avoid conflict with Grafana on 3000
       },
       error_file: './logs/pm2-error.log',
       out_file: './logs/pm2-out.log',
