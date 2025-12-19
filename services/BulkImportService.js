@@ -264,6 +264,24 @@ class BulkImportService {
   }
 
   /**
+   * Clean email subject by removing trailing numbers, whitespace, and noise
+   * @param {string} subject - Email subject to clean
+   * @returns {string} Cleaned subject
+   */
+  cleanSubject(subject) {
+    if (!subject || typeof subject !== 'string') {
+      return '';
+    }
+    
+    return subject
+      .replace(/\s+0+\s*$/gm, '') // Remove trailing "0" on same line
+      .replace(/\n\s*0+\s*$/gm, '') // Remove trailing "0" on new lines
+      .replace(/\s+$/gm, '') // Remove trailing whitespace
+      .replace(/\n+$/, '') // Remove trailing newlines
+      .trim();
+  }
+
+  /**
    * Enrich customer data using web search
    */
   async enrichCustomerData(customer, companyProfile) {
