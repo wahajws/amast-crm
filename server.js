@@ -11,6 +11,10 @@ const routes = require('./routes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy - Required when running behind Nginx or other reverse proxy
+// This allows Express to correctly identify client IPs from X-Forwarded-For headers
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 
