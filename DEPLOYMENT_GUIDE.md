@@ -141,47 +141,34 @@ npm run build
 ```
 
 ### Option A: Serve with Nginx (Recommended)
+See `NGINX_SETUP.md` for detailed instructions, or use the quick setup:
+
+```bash
+# Run the automated setup script
+cd /opt/amast-crm/amast-crm
+chmod +x setup-nginx.sh
+sudo ./setup-nginx.sh
+```
+
+Or manually:
 ```bash
 # Install Nginx
 apt-get update
 apt-get install nginx
 
-# Create Nginx configuration
+# Copy Nginx configuration
+cp nginx/amast-crm.conf /etc/nginx/sites-available/amast-crm
+
+# Edit and update server_name
 nano /etc/nginx/sites-available/amast-crm
-```
 
-Add this configuration:
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    # Frontend
-    location / {
-        root /opt/amast-crm/amast-crm/frontend/dist;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Backend API
-    location /api {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
-
-```bash
 # Enable site
 ln -s /etc/nginx/sites-available/amast-crm /etc/nginx/sites-enabled/
 nginx -t
 systemctl restart nginx
 ```
+
+**Note:** The Nginx configuration file (`nginx/amast-crm.conf`) is already included in the repository with proper settings for reverse proxy.
 
 ## Troubleshooting
 
