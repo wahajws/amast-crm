@@ -4,6 +4,20 @@ const fs = require('fs');
 const path = require('path');
 const { logger } = require('./logger');
 
+async function checkColumnExists(tableName, columnName) {
+  try {
+    const sql = `SELECT COUNT(*) as count 
+                 FROM INFORMATION_SCHEMA.COLUMNS 
+                 WHERE TABLE_SCHEMA = DATABASE() 
+                 AND TABLE_NAME = ? 
+                 AND COLUMN_NAME = ?`;
+    const results = await database.query(sql, [tableName, columnName]);
+    return results[0].count > 0;
+  } catch (error) {
+    return false;
+  }
+}
+
 async function runMigrations() {
   try {
     await database.connect();
@@ -36,6 +50,21 @@ async function runMigrations() {
       for (const statement of statements) {
         if (statement.trim()) {
           try {
+            // Special check for index creation: verify column exists first
+            const indexMatch = statement.match(/ADD\s+INDEX\s+\w+\s*\((\w+)\)/i);
+            if (indexMatch) {
+              const columnName = indexMatch[1];
+              const tableMatch = statement.match(/ALTER\s+TABLE\s+(\w+)/i);
+              if (tableMatch) {
+                const tableName = tableMatch[1];
+                const columnExists = await checkColumnExists(tableName, columnName);
+                if (!columnExists) {
+                  logger.warn(`  ⚠ Skipping index creation: column ${tableName}.${columnName} doesn't exist`);
+                  continue;
+                }
+              }
+            }
+            
             await database.query(statement + ';');
           } catch (error) {
             // If error is about duplicate column/index/constraint, it's okay (already applied)
@@ -43,8 +72,10 @@ async function runMigrations() {
                 error.message.includes('Duplicate key') ||
                 error.message.includes('already exists') ||
                 error.message.includes('Duplicate column name') ||
-                error.message.includes('Duplicate key name')) {
-              logger.warn(`  ⚠ Statement skipped (already applied): ${error.message.split('\n')[0]}`);
+                error.message.includes('Duplicate key name') ||
+                error.message.includes("doesn't exist in table") ||
+                error.message.includes('Key column') && error.message.includes("doesn't exist")) {
+              logger.warn(`  ⚠ Statement skipped (already applied or dependency missing): ${error.message.split('\n')[0]}`);
             } else {
               // Re-throw other errors
               throw error;
