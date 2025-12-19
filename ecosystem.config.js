@@ -21,9 +21,7 @@ module.exports = {
       watch: false,
       ignore_watch: ['node_modules', 'logs', '.git'],
       merge_logs: true,
-      kill_timeout: 5000,
-      wait_ready: true,  // Wait for app to be ready
-      listen_timeout: 10000  // Wait 10s for app to start listening
+      kill_timeout: 5000
     }
     // Note: Frontend is built as static files and served by Nginx
     // No PM2 process needed for frontend in production
