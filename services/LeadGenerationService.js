@@ -138,21 +138,66 @@ class LeadGenerationService {
       // Step 3: Extract company data from search results
       const batchSize = 20;
       const extractedCompanies = [];
+      const seenDomains = new Set(); // Track domains to prevent duplicates
       
+      // Helper function to extract domain from URL
+      const extractDomain = (url) => {
+        try {
+          const urlObj = new URL(url);
+          return urlObj.hostname.replace(/^www\./, '').toLowerCase();
+        } catch {
+          return null;
+        }
+      };
+
+      // Helper function to check if URL is a review/comparison site
+      const isReviewSite = (url) => {
+        const reviewPatterns = [
+          'tooltester', 'comparison', 'review', 'best-of', 'top-', 'vs-', 
+          'alternatives', 'vs.', 'compare', 'reviews', 'rating', 'ranking',
+          'g2.com', 'capterra', 'trustpilot', 'softwareadvice', 'getapp'
+        ];
+        const urlLower = url.toLowerCase();
+        return reviewPatterns.some(pattern => urlLower.includes(pattern));
+      };
+
       for (let i = 0; i < allSearchResults.length; i += batchSize) {
         const batch = allSearchResults.slice(i, i + batchSize);
         try {
           logger.info(`Extracting company data from batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(allSearchResults.length / batchSize)}...`);
           const extracted = await QwenService.extractCompanyDataFromSearch(batch);
-          extractedCompanies.push(...extracted);
-          logger.info(`Batch ${Math.floor(i / batchSize) + 1} complete: extracted ${extracted.length} companies`);
+          
+          // Filter out review sites and duplicates
+          for (const company of extracted) {
+            if (!company.website) continue;
+            
+            const domain = extractDomain(company.website);
+            if (!domain) continue;
+            
+            // Skip review/comparison sites
+            if (isReviewSite(company.website)) {
+              logger.info(`Filtered out review site: ${company.name || domain}`);
+              continue;
+            }
+            
+            // Skip duplicates
+            if (seenDomains.has(domain)) {
+              logger.info(`Skipped duplicate domain: ${company.name || domain}`);
+              continue;
+            }
+            
+            seenDomains.add(domain);
+            extractedCompanies.push(company);
+          }
+          
+          logger.info(`Batch ${Math.floor(i / batchSize) + 1} complete: extracted ${extracted.length} companies (${extractedCompanies.length} unique after filtering)`);
           await new Promise(resolve => setTimeout(resolve, 800)); // Reduced delay
         } catch (error) {
           logger.error(`Error extracting company data from batch ${Math.floor(i / batchSize) + 1}:`, error.message);
         }
       }
 
-      logger.info(`Extracted ${extractedCompanies.length} companies`);
+      logger.info(`Extracted ${extractedCompanies.length} unique companies (after filtering duplicates and review sites)`);
 
       // Step 4: Verify and enrich each company (sequential to avoid rate limits)
       const enrichedCompanies = [];
@@ -207,9 +252,10 @@ class LeadGenerationService {
           // Get the query that found this company
           const searchQuery = queryMap.get(company.website) || 'Unknown';
           
-          // Filter out low-scoring leads (likely competitors) - only keep scores >= 20
-          // Lowered from 30 to 20 to allow more leads through while still filtering obvious competitors
-          if (scoring.score >= 20) {
+          // Filter out low-scoring leads (likely competitors) - only keep scores >= 15
+          // Lowered to 15 to allow more potential customers through while still filtering obvious competitors
+          // Companies scoring 15-19 are potential customers that need more evaluation
+          if (scoring.score >= 15) {
             enrichedCompanies.push({
               ...enriched,
               relevanceScore: scoring.score,
