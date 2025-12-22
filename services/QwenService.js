@@ -171,58 +171,39 @@ Focus on extracting ALL products and services with maximum detail. This informat
       }).join(' | ');
     }
 
-    // Add randomization seed based on current time to ensure query diversity
-    const randomSeed = Date.now();
-    const industries = companyProfile.industry ? companyProfile.industry.split(/[,&]/).map(i => i.trim()) : [];
-    const targetMarket = companyProfile.targetMarket || 'businesses';
-    
-    const prompt = `Generate ${count} diverse and specific web search queries to find POTENTIAL CLIENTS (customers who would BUY from ${companyName}), NOT competitors or review sites.
+    const prompt = `Generate ${count} specific web search queries to find POTENTIAL CLIENTS (customers who would BUY from ${companyName}), NOT competitors.
 
 Company Profile:
 - Company Name: ${companyName}
 - Industry: ${companyProfile.industry || 'Not specified'}
 - Products/Services: ${productsText}
-- Target Market: ${targetMarket}
+- Target Market: ${companyProfile.targetMarket || 'Not specified'}
 
-CRITICAL REQUIREMENTS:
-1. Find COMPANIES WHO NEED AND WOULD BUY these products/services, NOT companies that sell similar products
-2. Target companies with DECISION MAKERS (CTO, CEO, VP, Director, Manager) who make purchasing decisions
-3. Find companies actively looking for solutions or experiencing problems these products solve
-4. AVOID: competitors, review sites, comparison sites, directories, aggregators
+CRITICAL: Generate search queries that find COMPANIES WHO NEED AND WOULD BUY these products/services, NOT companies that sell similar products.
 
-SEARCH STRATEGY - Generate diverse queries that find:
-- Companies hiring for roles related to these solutions (indicates need/growth)
-- Companies expanding or growing (indicates need for better tools)
-- Companies in target industries that would use these solutions
-- Companies with specific problems these products solve
-- Companies looking to upgrade from basic/outdated solutions
-- Companies with decision makers (CTO, CEO, VP titles) in target industries
+Good queries find:
+- Companies in industries that USE these solutions (e.g., if selling CRM software, find companies that need CRM)
+- Companies with problems these products solve
+- Companies looking for these types of services
+- Companies that would be customers/clients
 
-QUERY PATTERNS (use variations of these):
-- "[industry] companies hiring [role] [year]"
-- "[industry] companies expanding [location]"
+BAD queries (avoid these):
+- Companies selling similar products (competitors)
+- Companies in the same industry selling the same thing
+- Companies that are vendors/suppliers
+
+Generate diverse search queries like:
 - "[industry] companies looking for [solution type]"
 - "[industry] businesses needing [product category]"
-- "[industry] companies with CTO [location]"
-- "[industry] companies seeking [service type]"
-- "Companies using [outdated solution] that need upgrade"
-- "[Target market] companies [problem this solves]"
-- "[Industry] companies [use case]"
-- "[Location] [industry] companies [solution need]"
+- "Companies using [alternative solution] that need upgrade"
+- "[Target market] companies seeking [service type]"
 
-IMPORTANT: 
-- Make queries SPECIFIC and DIVERSE (vary industries, locations, company sizes, use cases)
-- Include different variations: hiring, expanding, looking for, needing, seeking
-- Target decision makers: CTO, CEO, VP, Director, Manager
-- Avoid generic queries that return review sites
-- Use current year (${new Date().getFullYear()}) in hiring queries for freshness
-
-Return ONLY a JSON array of ${count} unique search query strings, no additional text:
+Return ONLY a JSON array of search query strings, no additional text:
 ["query 1", "query 2", "query 3", ...]`;
 
     try {
       const response = await this.callQwen(prompt, {
-        temperature: 0.9, // Increased for more diversity
+        temperature: 0.8,
         maxTokens: 2000,
       });
 
@@ -234,20 +215,8 @@ Return ONLY a JSON array of ${count} unique search query strings, no additional 
         jsonStr = arrayMatch[0];
       }
 
-      let queries = JSON.parse(jsonStr);
-      if (!Array.isArray(queries)) {
-        queries = [];
-      }
-      
-      // Remove duplicates and shuffle for diversity
-      const uniqueQueries = [...new Set(queries)];
-      // Shuffle array to randomize order
-      for (let i = uniqueQueries.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [uniqueQueries[i], uniqueQueries[j]] = [uniqueQueries[j], uniqueQueries[i]];
-      }
-      
-      return uniqueQueries;
+      const queries = JSON.parse(jsonStr);
+      return Array.isArray(queries) ? queries : [];
     } catch (error) {
       logger.error('Error generating search queries:', error);
       return [];
@@ -271,36 +240,19 @@ Return ONLY a JSON array of ${count} unique search query strings, no additional 
 Search Results:
 ${JSON.stringify(limitedResults, null, 2)}
 
-CRITICAL FILTERING RULES:
-1. SKIP review sites, comparison sites, directories, aggregators (e.g., tooltester, comparison, review, best-of, vs-, alternatives, g2, capterra, etc.)
-2. SKIP competitors (companies selling similar products/services)
-3. ONLY extract companies that appear to be POTENTIAL CLIENTS (customers who would buy these products/services)
-
-For each VALID search result, extract company information:
+For each search result, extract company information:
 - name: Company name (from title or URL domain)
 - website: Full website URL (use the URL from the result)
 - description: Combine title and snippet into a detailed description
 - industry: Infer industry from title/description if possible
 - location: Extract {city, state, country} if mentioned in snippet
-- contactEmail: Extract email if mentioned (especially for decision makers: CTO, CEO, VP, Director)
-- contactName: Extract name of decision maker if mentioned (CTO, CEO, VP, Director, Manager)
-- contactTitle: Extract job title of decision maker if mentioned
-- companySize: Infer company size if mentioned (startup, small business, enterprise, etc.)
-
-PRIORITIZE companies that:
-- Have decision makers mentioned (CTO, CEO, VP, Director, Manager)
-- Are hiring for roles related to the solution
-- Are expanding or growing
-- Have contact information available
-- Are in industries that would use these solutions
 
 IMPORTANT: 
-1. Extract information for ALL VALID results provided, even if some fields are missing
-2. If a result is a review site, competitor, or directory, return an empty object {} for that result
+1. Extract information for ALL results provided, even if some fields are missing
+2. Only extract companies that appear to be POTENTIAL CLIENTS (customers who would buy), NOT competitors
 3. If a result doesn't clearly show a company, still extract what you can (name from URL domain, description from snippet)
-4. Look for decision maker contact info in snippets (CTO, CEO, VP emails, names, titles)
 
-Return ONLY a JSON array with one object per search result. For invalid results (review sites, competitors), return an empty object {}.
+Return ONLY a JSON array with one object per search result. If you cannot extract a company from a result, return an empty object {} for that result, but still include it in the array.
 
 Example format:
 [
@@ -382,14 +334,14 @@ Return the JSON array now:`;
    * Verify and enrich company data
    */
   async verifyAndEnrichCompany(companyData) {
-    const prompt = `Verify and enrich this company data with complete CRM information. Focus on finding DECISION MAKERS (CTO, CEO, VP, Director, Manager).
+    const prompt = `Verify and enrich this company data with complete CRM information. Return ONLY a valid JSON object, no additional text.
 
 Company Data:
 ${JSON.stringify(companyData, null, 2)}
 
 Enrich with ALL available CRM fields:
-- contactEmail: Extract email if mentioned in data, or generate best guess (prioritize: CTO email, CEO email, contact@company.com, info@company.com, sales@company.com, hello@company.com)
-- phone: Primary phone number if available
+- contactEmail: Best guess contact email (format: contact@company.com, info@company.com, sales@company.com, or hello@company.com)
+- phone: Primary phone number
 - companySize: Estimate (Small: <50, Medium: 50-500, Large: 500-5000, Enterprise: >5000)
 - industry: Refined industry classification
 - annualRevenue: Estimated annual revenue if available
@@ -397,10 +349,8 @@ Enrich with ALL available CRM fields:
 - billingCity: City from location if available
 - billingState: State from location if available
 - billingCountry: Country from location if available
-- contactName: Extract decision maker name if mentioned (CTO, CEO, VP, Director, Manager), otherwise best guess
-- contactTitle: Extract decision maker title if mentioned (prioritize: CTO, CEO, VP, Director, Manager), otherwise best guess
-
-PRIORITIZE finding decision makers (CTO, CEO, VP, Director, Manager) for companies that would be customers.
+- contactName: Best guess contact person name (e.g., "Sales Manager", "Business Owner", or generic "Contact")
+- contactTitle: Best guess job title (e.g., "CEO", "Manager", "Director")
 
 Return JSON object with all original fields plus enriched fields. Include ALL fields even if null.`;
 
@@ -459,16 +409,12 @@ CRITICAL SCORING RULES:
    - A direct competitor (sells identical/similar products/services to the same market)
    - In the same industry selling the exact same thing
    - A vendor/supplier of identical solutions
-   - A review site, comparison site, or directory
 
 2. REWARD HIGHLY (score 70-100) if lead:
-   - Is in an industry that USES/NEEDS these products/services as customers
+   - Is in an industry that USES/NEEDS these products/services
    - Has problems these products solve
    - Would be a customer/client (buys, not sells)
    - Matches target market
-   - Has decision maker contact info (CTO, CEO, VP, Director, Manager)
-   - Is hiring for roles related to the solution (indicates need/growth)
-   - Is expanding or growing (indicates need for better tools)
    - Has complete contact information
 
 3. MIDDLE RANGE (score 20-69) for leads that:
@@ -476,23 +422,15 @@ CRITICAL SCORING RULES:
    - Are in related industries that might benefit
    - Have some alignment with target market
    - Show potential as customers even if not ideal
-   - Have partial contact information
-   - Are in industries that commonly use similar solutions
 
-4. SCORING FACTORS (be GENEROUS - err on the side of including potential customers):
-   - Industry match (does lead's industry NEED these solutions as customers?) - HIGH WEIGHT
-   - Decision maker presence (CTO, CEO, VP, Director mentioned) - HIGH WEIGHT
-   - Company size fit (matches target market?) - MEDIUM WEIGHT
-   - Product/service alignment (would this lead BUY the products/services?) - HIGH WEIGHT
-   - Use case match (does the lead have problems these products solve?) - HIGH WEIGHT
-   - Growth indicators (hiring, expanding) - MEDIUM WEIGHT
-   - Data completeness (email, phone, address) - LOW WEIGHT (nice to have)
-   - Geographic relevance - LOW WEIGHT
-
-5. DEFAULT SCORING GUIDELINE:
-   - If unsure, score 25-40 (middle range) rather than too low
-   - Only score below 20 if clearly a competitor or review site
-   - Score 50+ if there's any reasonable chance they could be a customer
+4. Consider factors:
+   - Industry match (does lead's industry NEED these solutions as customers?)
+   - Company size fit (matches target market?)
+   - Geographic relevance
+   - Product/service alignment (would this lead BUY the products/services?)
+   - Use case match (does the lead have problems these products solve?)
+   - Data completeness (email, phone, address)
+   - Be GENEROUS with scoring - err on the side of including potential customers
 
 Return ONLY a JSON object with:
 {
