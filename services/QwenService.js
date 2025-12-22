@@ -405,10 +405,10 @@ Lead Data:
 ${JSON.stringify(leadData, null, 2)}
 
 CRITICAL SCORING RULES:
-1. PENALIZE HEAVILY (score 0-20) if lead appears to be:
-   - A competitor (sells similar products/services)
-   - In the same industry selling the same thing
-   - A vendor/supplier of similar solutions
+1. PENALIZE HEAVILY (score 0-15) ONLY if lead is clearly:
+   - A direct competitor (sells identical/similar products/services to the same market)
+   - In the same industry selling the exact same thing
+   - A vendor/supplier of identical solutions
 
 2. REWARD HIGHLY (score 70-100) if lead:
    - Is in an industry that USES/NEEDS these products/services
@@ -417,13 +417,20 @@ CRITICAL SCORING RULES:
    - Matches target market
    - Has complete contact information
 
-3. Consider factors:
+3. MIDDLE RANGE (score 20-69) for leads that:
+   - Could potentially use these products/services (even if not perfect match)
+   - Are in related industries that might benefit
+   - Have some alignment with target market
+   - Show potential as customers even if not ideal
+
+4. Consider factors:
    - Industry match (does lead's industry NEED these solutions as customers?)
    - Company size fit (matches target market?)
    - Geographic relevance
    - Product/service alignment (would this lead BUY the products/services?)
    - Use case match (does the lead have problems these products solve?)
    - Data completeness (email, phone, address)
+   - Be GENEROUS with scoring - err on the side of including potential customers
 
 Return ONLY a JSON object with:
 {

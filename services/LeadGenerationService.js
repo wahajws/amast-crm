@@ -207,8 +207,9 @@ class LeadGenerationService {
           // Get the query that found this company
           const searchQuery = queryMap.get(company.website) || 'Unknown';
           
-          // Filter out low-scoring leads (likely competitors) - only keep scores >= 30
-          if (scoring.score >= 30) {
+          // Filter out low-scoring leads (likely competitors) - only keep scores >= 20
+          // Lowered from 30 to 20 to allow more leads through while still filtering obvious competitors
+          if (scoring.score >= 20) {
             enrichedCompanies.push({
               ...enriched,
               relevanceScore: scoring.score,
